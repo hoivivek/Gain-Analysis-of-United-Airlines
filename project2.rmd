@@ -1,0 +1,302 @@
+---
+title: "Gain Analysis of United Airlines"
+author : Vivek Reddy Karra
+output: html_document
+date: "2023-11-20"
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr) 
+library(nycflights13)
+```                  
+
+```{r}
+data("flights")
+```
+
+
+```{r}
+UA_flights <- flights %>%
+  filter(carrier=="UA")
+  
+```
+
+
+```{r}
+UA_flights_new <- na.omit(UA_flights) 
+```
+
+
+
+
+
+
+
+```{r}
+UA_flights <- UA_flights_new %>%
+  mutate(net_gain = dep_delay - arr_delay,
+         late = dep_delay > 0 ,         
+    very_late = dep_delay > 30,
+    flight_duration = case_when(
+    hour < 6 ~ "Short",
+    hour >= 6 ~ "Longer"),
+    gain_per_hour = net_gain/hour
+    )
+```
+
+
+
+
+```{r}
+summary(UA_flights)
+```
+
+```{r}
+
+
+table <- cbind(
+summary(UA_flights$dep_delay),
+summary(UA_flights$net_gain),
+summary(UA_flights$gain_per_hour))
+columns <- c("dep_delay", "net_gain", "gain_per_hour")
+colnames(table)<- columns
+data.frame(table)
+```
+
+
+
+
+```{r}
+ggplot(data = UA_flights, mapping=aes(x=net_gain))+
+  geom_histogram(color="white", fill="orange")
+```
+
+
+```{r}
+ggplot(data = UA_flights, mapping=aes(x=gain_per_hour))+
+  geom_histogram(color="white", fill="blue")
+```
+
+
+
+```{r}
+ggplot(data = UA_flights, mapping = aes(x = flight_duration, fill = late)) +
+  geom_bar()
+
+ggplot(data = UA_flights, mapping = aes(x = flight_duration, fill = very_late)) +
+  geom_bar()
+
+ggplot(data = UA_flights, mapping = aes(x = flight_duration)) +
+  geom_bar()
+
+ggplot(data = UA_flights, mapping = aes(x = late)) +
+  geom_bar()
+
+ggplot(data = UA_flights, mapping = aes(x = very_late)) +
+  geom_bar()
+
+```
+
+
+
+
+```{r}
+ggplot(data = UA_flights, mapping = aes(x = late, y = gain_per_hour)) +
+  geom_boxplot(fill="yellow")
+
+ggplot(data = UA_flights, mapping = aes(x = very_late, y = gain_per_hour)) +
+  geom_boxplot(fill="yellow")
+```
+
+
+```{r}
+ggplot(data = UA_flights, mapping = aes(x = late, y = net_gain)) +
+  geom_boxplot(fill="green")
+
+ggplot(data = UA_flights, mapping = aes(x = very_late, y = net_gain)) +
+  geom_boxplot(fill="green")
+
+```
+
+
+
+```{r}
+UA_flight.not_late <- UA_flights$net_gain[UA_flights$late == "FALSE"]
+UA_flight.late <- UA_flights$net_gain[UA_flights$late == "TRUE"]
+
+n.late <- length(UA_flight.late)
+n.not_late <- length(UA_flight.not_late)
+
+avg_gain <- numeric(1000)
+for(i in 1:1000)
+{
+  sample.late <- sample(UA_flight.late, size = n.late, replace = TRUE)
+  sample.not_late <- sample(UA_flight.not_late, size = n.not_late, replace = TRUE)
+  avg_gain[i] <- mean(sample.not_late) - mean(sample.late)
+}
+ggplot(data=tibble(avg_gain), mapping = aes(x = avg_gain)) +
+  geom_histogram()
+
+
+quantile(avg_gain, c(.025, .975))
+```
+
+```{r}
+UA_flight.not_verylate <- UA_flights$net_gain[UA_flights$very_late == "FALSE"]
+UA_flight.very_late <- UA_flights$net_gain[UA_flights$very_late == "TRUE"]
+
+
+n.very_late <- length(UA_flight.very_late)
+n.not_verylate <- length(UA_flight.not_verylate)
+
+avg_gain <- numeric(1000)
+for(i in 1:1000)
+{
+  sample.very_late <- sample(UA_flight.very_late, size = n.very_late, replace = TRUE)
+  sample.not_verylate <- sample(UA_flight.not_verylate, size = n.not_verylate, replace = TRUE)
+  avg_gain[i] <- mean(sample.not_verylate) - mean(sample.very_late)
+}
+
+ggplot(data=tibble(avg_gain), mapping = aes(x = avg_gain)) +
+  geom_histogram()
+  
+
+quantile(avg_gain, c(.025, .975))
+```
+
+
+```{r}
+t.test(net_gain~late,data=UA_flights, alternative = "two.sided") 
+```
+```{r}
+t.test(net_gain~very_late,data=UA_flights, alternative = "two.sided") 
+```
+
+
+
+
+```{r}
+UA_flight.not_late <- UA_flights$gain_per_hour[UA_flights$late == "FALSE"]
+UA_flight.late <- UA_flights$gain_per_hour[UA_flights$late == "TRUE"]
+
+n.late <- length(UA_flight.late)
+n.not_late <- length(UA_flight.not_late)
+
+avg_gph <- numeric(1000)
+for(i in 1:1000)
+{
+  sample.late <- sample(UA_flight.late, size = n.late, replace = TRUE)
+  sample.not_late <- sample(UA_flight.not_late, size = n.not_late, replace = TRUE)
+  avg_gph[i] <- mean(sample.not_late) - mean(sample.late)
+}
+ggplot(data=tibble(avg_gph), mapping = aes(x = avg_gph)) +
+  geom_histogram()
+
+
+quantile(avg_gph, c(.025, .975))
+```
+
+```{r}
+UA_flight.not_verylate <- UA_flights$gain_per_hour[UA_flights$very_late == "FALSE"]
+UA_flight.very_late <- UA_flights$gain_per_hour[UA_flights$very_late == "TRUE"]
+
+n.very_late <- length(UA_flight.very_late)
+n.not_verylate <- length(UA_flight.not_verylate)
+
+avg_gph <- numeric(1000)
+for(i in 1:1000)
+{
+  sample.very_late <- sample(UA_flight.very_late, size = n.very_late, replace = TRUE)
+  sample.not_verylate <- sample(UA_flight.not_verylate, size = n.not_verylate, replace = TRUE)
+  avg_gph[i] <- mean(sample.not_verylate) - mean(sample.very_late)
+}
+ggplot(data=tibble(avg_gph), mapping = aes(x = avg_gph)) +
+  geom_histogram()
+
+
+quantile(avg_gph, c(.025, .975))
+```
+
+
+```{r}
+t.test(gain_per_hour~late,data=UA_flights, alternative = "two.sided") 
+```
+
+
+```{r}
+t.test(gain_per_hour~very_late,data=UA_flights, alternative = "two.sided") 
+```
+
+
+```{r}
+UA_flight.shorter <- UA_flights$gain_per_hour[UA_flights$flight_duration == "Short"]
+UA_flight.longer <- UA_flights$gain_per_hour[UA_flights$flight_duration == "Longer"]
+
+n.shorter <- length(UA_flight.shorter)
+n.longer <- length(UA_flight.longer)
+
+avg_gph <- numeric(1000)
+for(i in 1:1000)
+{
+  sample.shorter <- sample(UA_flight.shorter, size = n.shorter, replace = TRUE)
+  sample.longer <- sample(UA_flight.longer, size = n.longer, replace = TRUE)
+  avg_gph[i] <- mean(sample.shorter) - mean(sample.longer)
+}
+ggplot(data=tibble(avg_gph), mapping = aes(x = avg_gph)) +
+  geom_histogram()
+
+
+quantile(avg_gph, c(.025, .975))
+```
+
+
+```{r}
+t.test(gain_per_hour~flight_duration,data=UA_flights, alternative = "two.sided") 
+```
+
+```{r}
+top_airports <- UA_flights %>%
+  group_by(dest) %>%
+  summarise(frequency = n()) %>%
+  arrange(desc(frequency)) %>%
+  head(5)
+
+print(top_airports)
+
+ggplot(data = top_airports, aes(x = dest, y = frequency)) +
+  geom_bar(stat = "identity", fill="darkgreen") +
+  ggtitle("five most common destination airports for United Airlines")
+  
+```
+
+```{r}
+for (airport in top_airports$dest) {
+  airport_data <- UA_flights %>% 
+    filter(dest == airport)
+  avg_gain <- mean(airport_data$net_gain)
+  conf_int <- t.test(airport_data$net_gain)$conf.int
+  print(paste("Average Gain for", airport, ":", avg_gain))
+  print(paste("Confidence interval for ", airport, ":", conf_int[1],conf_int[2]))
+}
+
+```
+
+
+
+```{r}
+
+airport_data <- UA_flights %>% 
+  filter(dest %in% top_airports$dest)
+
+# Create a boxplot with facets for each airport
+ggplot(data = airport_data, aes(x = net_gain)) +
+  geom_histogram(position = "identity", alpha = 0.7, fill = "blue",color="black") +
+  ggtitle("Gain Distribution for 5 most Airports for United Airlines") +
+  facet_wrap(~ dest, ncol = 3)
+
+```
+
+
